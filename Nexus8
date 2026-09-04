@@ -1,0 +1,162 @@
+-- MENU MOBILE STABLE - Roblox
+-- Script Local
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- 1. CRÉATION DU CADRE PRINCIPAL (Menu)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UniversalMenuGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = Player.PlayerGui
+
+local Frame = Instance.new("Frame")
+Frame.Name = "MainFrame"
+Frame.Size = UDim2.new(0, 320, 0, 400) -- Grand pour mobile
+Frame.Position = UDim2.new(0.5, -160, 0.5, -200) -- Centré
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Frame.BackgroundTransparency = 0.1
+Frame.BorderSizePixel = 0
+Frame.ClipsDescendants = true
+Frame.Parent = ScreenGui
+
+-- Titre
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "MENU ULTIME"
+Title.Font = Enum.Font.GothenBold
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 20
+Title.Parent = Frame
+
+-- 2. LE PETIT CARRÉ (TOGGLE)
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Position = UDim2.new(1, -60, 0, 5) -- Coin haut droit du frame
+ToggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+ToggleButton.Text = "≡"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.TextSize = 24
+ToggleButton.Parent = Frame
+
+-- Variable pour savoir si le menu est ouvert
+local isOpen = false
+
+ToggleButton.MouseButton1Click:Connect(function()
+    isOpen = not isOpen
+    if isOpen then
+        -- Animation ouverture
+        Frame:TweenPosition(UDim2.new(0.5, -160, 0.1, 50), "InOut", "Quad", 0.3, true)
+    else
+        -- Animation fermeture
+        Frame:TweenPosition(UDim2.new(0.5, -160, 0.5, -200), "InOut", "Quad", 0.3, true)
+        
+        -- On arrête les actions qui tournent en boucle quand le menu est fermé
+        if ToggleSpeed then ToggleSpeed:Cancel() end
+        if ToggleNoclip then ToggleNoclip:Cancel() end
+    end
+end)
+
+-- Fonction utilitaire pour créer des boutons propres
+local function CreateBtn(text, color, action)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 50)
+    btn.Position = UDim2.new(0, 10, 0, 50)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothenBold
+    btn.TextSize = 16
+    btn.Parent = Frame
+    
+    -- Clic classique et tactile
+    btn.MouseButton1Click:Connect(action)
+    btn.TouchTap:Connect(action)
+    
+    return btn
+end
+
+-- 3. LES ACTIONS
+
+-- A. GOD MODE (Soin auto)
+CreateButton("God Mode", Color3.new(0, 1, 0), function()
+    -- On active une boucle qui répare les PV
+    local active = true
+    local connection = Humanoid.HealthChanged:Connect(function(newHealth)
+        if active and newHealth < 100 then
+            Humanoid.Health = 100
+        end
+    end)
+    
+    -- Quand le menu se ferme, on coupe la boucle
+    ToggleGodMode = connection
+    -- Pour le fermer quand le menu est fermé, on va utiliser une logique différente :
+    -- On va créer une variable globale pour pouvoir l'annuler via le bouton Toggle
+    if not GodeModeConn then
+        GodeModeConn = connection
+    end
+end, Color3.fromRGB(50, 150, 50))
+
+-- B. SPEED HACK (Bouton simple : Active/Desactive)
+CreateButton("Speed x3", Color3.fromRGB(0, 0, 150), function()
+    if Humanoid.WalkSpeed == 16 then
+        Humanoid.WalkSpeed = 48
+        print("Speed activé")
+    else
+        Humanoid.WalkSpeed = 16
+        print("Speed désactivé")
+    end
+end, Color3.fromRGB(50, 50, 150))
+
+-- C. TP (Téléportation)
+CreateButton("TP Aléatoire", Color3.fromRGB(150, 50, 50), function()
+    -- TP vers une position aléatoire autour du joueur
+    local origin = Character.PrimaryPart.Position
+    local randomPos = origin + Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
+    Character:SetPrimaryPartCFrame(CFrame.new(randomPos.X, randomPos.Y + 20, randomPos.Z))
+    print("TP réussi")
+end, Color3.fromRGB(150, 50, 50))
+
+-- D. NOCLIP (Passer à travers les murs)
+CreateButton("Noclip (Mode Vol)", Color3.fromRGB(100, 100, 200), function()
+    -- Vérifier si le mode est déjà actif
+    local isNoclipActive = false
+    for _, v in pairs(Character:GetChildren()) do
+        if v:IsA("BasePart") and v.CanCollide == false then
+            isNoclipActive = true
+            break
+        end
+    end
+    
+    if isNoclipActive then
+        -- Désactiver
+        for _, v in pairs(Character:GetChildren()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = true
+                v.Transparency = 0
+            end
+        end
+    else
+        -- Activer
+        for _, v in pairs(Character:GetChildren()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+                v.Transparency = 0.7 -- Devient transparent
+            end
+        end
+    end
+end, Color3.fromRGB(100, 100, 200))
+
+-- Nettoyage à la fermeture du menu (Optionnel mais propre)
+-- Si tu veux que les actions s'arrêtent TOUT quand le menu est fermé, 
+-- il faut gérer les variables. Ici, j'ai fait des "on/off" pour la plupart.
+
+print("Menu Mobile Universel chargé !")
